@@ -1,16 +1,11 @@
-import selenium
 from selenium import webdriver
-
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-
 import json
-import pymysql
-
+import time
 
 options = webdriver.ChromeOptions()
-import time
 
 #자동꺼짐 방지
 chrome_options = webdriver.ChromeOptions()
@@ -24,7 +19,7 @@ driver = webdriver.Chrome(options = chrome_options)
 
 
 search_keywords = ['보이스피싱', '스미싱', '신종사기']
-black_keywords = ['예방','감사장','AI','시스템','협약','배상']
+black_keywords = ['예방','감사장','AI','시스템','협약','배상', '교육']
 
 
 for search_keyword in search_keywords:
@@ -52,30 +47,27 @@ for search_keyword in search_keywords:
         continue
     contents = driver.find_elements(By.CSS_SELECTOR, '.news_dsc .dsc_wrap > a')
     data = []
+    seen_titles = set()
     for title, content in zip(titles, contents):
-        if str(content.text).find(search_keyword) != -1:
-            for word in black_keywords:
-                if str(content.text).find(word) != -1 or str(title.text).find(word) != -1:
-                    break
-                else:
-                    link = title.get_dom_attribute('href')
-                    item = {
-                        'search_keyword': search_keyword,
-                        'title': title.text,
-                        'content': content.text,
-                        'link': link
-                    }
-                    data.append(item)
-                    break
-    inner_title = ''
-    new_data = []
-    for item in data:
-        if inner_title == item['title']:
-            new_data.append(item)
-            break
-        else:
-            inner_title = item['title']
-    with open(f'news_phishing_{search_keyword}.json', 'w', encoding='utf-8') as f :
-        json.dump(new_data, f,ensure_ascii = False, indent = 4)
+        if search_keyword in content.text:
+            # black_keywords 중 하나라도 포함되면 해당 기사를 건너뜀
+            if any(word in content.text for word in black_keywords) or any(
+                    word in title.text for word in black_keywords):
+                continue
+                # 제목이 이미 처리된 적이 있는 경우 건너뜀
+            if title.text in seen_titles:
+                continue
+            link = title.get_dom_attribute('href')
+            item = {
+                'search_keyword': search_keyword,
+                'title': title.text,
+                'content': content.text,
+                'link': link
+            }
+            data.append(item)
+            seen_titles.add(title.text)
+
+    with open(f'news_phishing_{search_keyword}.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 driver.close()
