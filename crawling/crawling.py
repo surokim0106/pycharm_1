@@ -71,6 +71,7 @@ for search_keyword in search_keywords:
         json.dump(data, f,ensure_ascii = False, indent = 4)
 
 
+
 #driver.close()
 
 
